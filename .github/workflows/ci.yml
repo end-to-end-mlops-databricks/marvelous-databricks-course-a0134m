@@ -18,7 +18,9 @@ jobs:
         run: uv python install 3.11
 
       - name: Install the dependencies
-        run: uv sync 
+        run: |
+          uv sync 
+          uv install pre-commit
 
       - name: Run pre-commit checks
         run: |

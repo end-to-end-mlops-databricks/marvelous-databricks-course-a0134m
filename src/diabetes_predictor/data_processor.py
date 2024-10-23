@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class DataProcessor:
     def __init__(self, filepath, config):
         self.df = self.load_data(filepath)
@@ -10,8 +11,8 @@ class DataProcessor:
 
     def load_data(self, filepath):
         return pd.read_csv(filepath)
-    
+
     def preprocess_data(self):
         # Remove rows with missing target
-        target = self.config['target']
+        target = self.config["target"]
         self.df = self.df.dropna(subset=[target])

@@ -20,8 +20,8 @@ jobs:
       - name: Install the dependencies
         run: |
           uv sync 
-          uv install pre-commit
+          uv pip install pre-commit
 
       - name: Run pre-commit checks
         run: |
-          pre-commit run --all-files
+          uv run pre-commit run --all-files

@@ -30,11 +30,9 @@ select = [
     "W",  # pycodestyle warning rules
     "B",  # flake8-bugbear rules
     "I",  # isort rules
-    "lint.select",
 ]
 ignore = [
     "E501",  # line-too-long
-    "lint.ignore",
 ]
 
 [tool.ruff.format]

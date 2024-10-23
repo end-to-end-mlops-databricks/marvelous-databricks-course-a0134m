@@ -1,5 +1,4 @@
 import pandas as pd
-import yaml
 
 class DataProcessor:
     def __init__(self, filepath, config):

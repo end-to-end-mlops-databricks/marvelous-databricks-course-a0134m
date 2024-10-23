@@ -19,7 +19,7 @@ jobs:
 
       - name: Install the dependencies
         run: |
-          uv sync 
+          uv sync
           uv pip install pre-commit
 
       - name: Run pre-commit checks

@@ -1,5 +1,5 @@
-import yaml
 import logging
+import yaml
 
 from diabetes_predictor.data_processor import DataProcessor
 

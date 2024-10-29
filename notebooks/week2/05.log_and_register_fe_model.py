@@ -3,24 +3,22 @@
 
 # COMMAND ----------
 
-dbutils.library.restartPython() 
+dbutils.library.restartPython()
 
 # COMMAND ----------
-import yaml
-from databricks import feature_engineering
-from pyspark.sql import SparkSession
-from databricks.sdk import WorkspaceClient
 import mlflow
-from pyspark.sql import functions as F
+from databricks import feature_engineering
+from databricks.feature_engineering import FeatureFunction, FeatureLookup
+from databricks.sdk import WorkspaceClient
 from lightgbm import LGBMRegressor
 from mlflow.models import infer_signature
+from pyspark.sql import SparkSession
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from datetime import datetime
-from databricks.feature_engineering import FeatureFunction, FeatureLookup
+
 from wine_quality.config import ProjectConfig
 
 # Initialize the Databricks session and clients
@@ -65,17 +63,21 @@ CREATE OR REPLACE TABLE {catalog_name}.{schema_name}.wine_features
  sulphates double);
 """)
 
-spark.sql(f"ALTER TABLE {catalog_name}.{schema_name}.wine_features "
-          "ADD CONSTRAINT wine_pk PRIMARY KEY(Id);")
+spark.sql(f"ALTER TABLE {catalog_name}.{schema_name}.wine_features " "ADD CONSTRAINT wine_pk PRIMARY KEY(Id);")
 
-spark.sql(f"ALTER TABLE {catalog_name}.{schema_name}.wine_features "
-          "SET TBLPROPERTIES (delta.enableChangeDataFeed = true);")
+spark.sql(
+    f"ALTER TABLE {catalog_name}.{schema_name}.wine_features " "SET TBLPROPERTIES (delta.enableChangeDataFeed = true);"
+)
 
 # Insert data into the feature table from both train and test sets
-spark.sql(f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
-          f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.train_set")
-spark.sql(f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
-          f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.test_set")
+spark.sql(
+    f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
+    f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.train_set"
+)
+spark.sql(
+    f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
+    f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.test_set"
+)
 
 # COMMAND ----------
 # Define a function to calculate the wine dryness using the current year and YearBuilt
@@ -116,7 +118,7 @@ training_set = fe.create_training_set(
             input_bindings={"residual_sugar_content": "residual_sugar"},
         ),
     ],
-    exclude_columns=["update_timestamp_utc"]
+    exclude_columns=["update_timestamp_utc"],
 )
 # COMMAND ----------
 # Load feature-engineered DataFrame
@@ -134,23 +136,17 @@ y_test = test_set[target]
 # COMMAND ----------
 # Setup preprocessing and model pipeline
 preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', SimpleImputer(strategy='mean'), num_features),
-        ('std', StandardScaler(), num_features)
-    ], remainder="passthrough"
+    transformers=[("num", SimpleImputer(strategy="mean"), num_features), ("std", StandardScaler(), num_features)],
+    remainder="passthrough",
 )
 
 # Create the pipeline with preprocessing and the LightGBM regressor
-pipeline = Pipeline(steps=[
-     ('preprocessor', preprocessor),
-    ('regressor', LGBMRegressor(**parameters))
-])
+pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("regressor", LGBMRegressor(**parameters))])
 
 # Set and start MLflow experiment
 mlflow.set_experiment(experiment_name=cur_experiment_name)
 
-with mlflow.start_run(tags={"branch": "week2",
-                            "git_sha": f"{git_sha_id}"}) as run:
+with mlflow.start_run(tags={"branch": "week2", "git_sha": f"{git_sha_id}"}) as run:
     run_id = run.info.run_id
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
@@ -181,5 +177,5 @@ with mlflow.start_run(tags={"branch": "week2",
     )
 # COMMAND ----------
 mlflow.register_model(
-    model_uri=f'runs:/{run_id}/{cur_model_artifact_path}',
-    name=f"{catalog_name}.{schema_name}.{cur_model_name}")
+    model_uri=f"runs:/{run_id}/{cur_model_artifact_path}", name=f"{catalog_name}.{schema_name}.{cur_model_name}"
+)

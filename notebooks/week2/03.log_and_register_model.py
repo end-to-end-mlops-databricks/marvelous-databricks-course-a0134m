@@ -1,18 +1,19 @@
 # Databricks notebook source
 
+import mlflow
+from lightgbm import LGBMRegressor
+from mlflow.models import infer_signature
 from pyspark.sql import SparkSession
-from wine_quality.config import ProjectConfig
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from lightgbm import LGBMRegressor
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import mlflow
-from mlflow.models import infer_signature
+
+from wine_quality.config import ProjectConfig
 
 mlflow.set_tracking_uri("databricks")
-mlflow.set_registry_uri('databricks-uc') # It must be -uc for registering models to Unity Catalog
+mlflow.set_registry_uri("databricks-uc")  # It must be -uc for registering models to Unity Catalog
 cur_experiment_name = "/Shared/wine-quality-basic"
 git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
 
@@ -44,17 +45,12 @@ y_test = test_set[target]
 # COMMAND ----------
 # Define the preprocessor and do some preprocessing
 preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', SimpleImputer(strategy='mean'), num_features),
-        ('std', StandardScaler(), num_features)
-    ], remainder="passthrough"
+    transformers=[("num", SimpleImputer(strategy="mean"), num_features), ("std", StandardScaler(), num_features)],
+    remainder="passthrough",
 )
 
 # Create the pipeline with preprocessing and the LightGBM regressor
-pipeline = Pipeline(steps=[
-     ('preprocessor', preprocessor),
-    ('regressor', LGBMRegressor(**parameters))
-])
+pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("regressor", LGBMRegressor(**parameters))])
 
 # COMMAND ----------
 mlflow.set_experiment(experiment_name=cur_experiment_name)
@@ -63,8 +59,7 @@ mlflow.lightgbm.autolog()
 
 # Start an MLflow run to track the training process
 with mlflow.start_run(
-    tags={"git_sha": f"{git_sha_id}",
-          "branch": "week2"},
+    tags={"git_sha": f"{git_sha_id}", "branch": "week2"},
 ) as run:
     run_id = run.info.run_id
 
@@ -92,18 +87,15 @@ with mlflow.start_run(
 
     dataset = mlflow.data.from_spark(train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
     mlflow.log_input(dataset, context="training")
-    
-    mlflow.sklearn.log_model(
-        sk_model=pipeline,
-        artifact_path="lightgbm-pipeline-model",
-        signature=signature
-    )
+
+    mlflow.sklearn.log_model(sk_model=pipeline, artifact_path="lightgbm-pipeline-model", signature=signature)
 
 # COMMAND ----------
 model_version = mlflow.register_model(
-    model_uri=f'runs:/{run_id}/lightgbm-pipeline-model',
+    model_uri=f"runs:/{run_id}/lightgbm-pipeline-model",
     name=f"{catalog_name}.{schema_name}.wine_quality_basic",
-    tags={"git_sha": f"{git_sha_id}"})
+    tags={"git_sha": f"{git_sha_id}"},
+)
 
 # COMMAND ----------
 run = mlflow.get_run(run_id)
@@ -111,4 +103,4 @@ dataset_info = run.inputs.dataset_inputs[0].dataset
 dataset_source = mlflow.data.get_source(dataset_info)
 
 # COMMAND ----------
-dataset_source.load() 
+dataset_source.load()

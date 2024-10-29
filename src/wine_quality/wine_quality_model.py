@@ -1,18 +1,24 @@
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import f1_score, mean_squared_error, r2_score
+
 
 class WineQualityModel:
     def __init__(self, preprocessor, config):
         self.config = config
-        self.model = Pipeline(steps=[
-            ('preprocessor', preprocessor),
-            ('regressor', RandomForestRegressor(
-                n_estimators=config['parameters']['n_estimators'],
-                max_depth=config['parameters']['max_depth'],
-                random_state=42
-            ))
-        ])
+        self.model = Pipeline(
+            steps=[
+                ("preprocessor", preprocessor),
+                (
+                    "regressor",
+                    RandomForestRegressor(
+                        n_estimators=config["parameters"]["n_estimators"],
+                        max_depth=config["parameters"]["max_depth"],
+                        random_state=42,
+                    ),
+                ),
+            ]
+        )
 
     def train(self, X_train, y_train):
         self.model.fit(X_train, y_train)
@@ -27,6 +33,6 @@ class WineQualityModel:
         return mse, r2
 
     def get_feature_importance(self):
-        feature_importance = self.model.named_steps['regressor'].feature_importances_
-        feature_names = self.model.named_steps['preprocessor'].get_feature_names_out()
+        feature_importance = self.model.named_steps["regressor"].feature_importances_
+        feature_names = self.model.named_steps["preprocessor"].get_feature_names_out()
         return feature_importance, feature_names

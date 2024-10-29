@@ -1,7 +1,7 @@
 import logging
+
 import pandas as pd
 
-import yaml
 from wine_quality.config import ProjectConfig
 from wine_quality.data_processor import DataProcessor
 

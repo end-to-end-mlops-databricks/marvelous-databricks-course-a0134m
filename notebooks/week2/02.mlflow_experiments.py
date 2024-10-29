@@ -7,7 +7,7 @@ mlflow.set_tracking_uri("databricks")
 
 experiment_name = "/Shared/wine-quality-basic"
 repo_name = "wine_quality"
-git_sha_id = "f6ee5171f4bc705b755af1ce4665cfdf98901e73"
+git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
 
 mlflow.set_experiment(experiment_name=experiment_name)
 mlflow.set_experiment_tags({"repository_name": repo_name})

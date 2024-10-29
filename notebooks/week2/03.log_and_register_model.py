@@ -14,7 +14,7 @@ from mlflow.models import infer_signature
 mlflow.set_tracking_uri("databricks")
 mlflow.set_registry_uri('databricks-uc') # It must be -uc for registering models to Unity Catalog
 cur_experiment_name = "/Shared/wine-quality-basic"
-git_sha_id = "f6ee5171f4bc705b755af1ce4665cfdf98901e73"
+git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
 
 # COMMAND ----------
 
@@ -47,7 +47,7 @@ preprocessor = ColumnTransformer(
     transformers=[
         ('num', SimpleImputer(strategy='mean'), num_features),
         ('std', StandardScaler(), num_features)
-    ]
+    ], remainder="passthrough"
 )
 
 # Create the pipeline with preprocessing and the LightGBM regressor
@@ -58,13 +58,12 @@ pipeline = Pipeline(steps=[
 
 # COMMAND ----------
 mlflow.set_experiment(experiment_name=cur_experiment_name)
-git_sha = git_sha_id
 # Specify model type during auto logging because pipeline is not a scikit-learn but model is LightGBM
 mlflow.lightgbm.autolog()
 
 # Start an MLflow run to track the training process
 with mlflow.start_run(
-    tags={"git_sha": f"{git_sha}",
+    tags={"git_sha": f"{git_sha_id}",
           "branch": "week2"},
 ) as run:
     run_id = run.info.run_id
@@ -91,9 +90,7 @@ with mlflow.start_run(
     # Create signature object, required for registering the model in UC. Signature is the expected schema for inputs and outputs.
     signature = infer_signature(model_input=X_train, model_output=y_pred)
 
-    dataset = mlflow.data.from_spark(
-    train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set",
-    version="0")
+    dataset = mlflow.data.from_spark(train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
     mlflow.log_input(dataset, context="training")
     
     mlflow.sklearn.log_model(
@@ -106,12 +103,12 @@ with mlflow.start_run(
 model_version = mlflow.register_model(
     model_uri=f'runs:/{run_id}/lightgbm-pipeline-model',
     name=f"{catalog_name}.{schema_name}.wine_quality_basic",
-    tags={"git_sha": f"{git_sha}"})
+    tags={"git_sha": f"{git_sha_id}"})
 
 # COMMAND ----------
 run = mlflow.get_run(run_id)
 dataset_info = run.inputs.dataset_inputs[0].dataset
 dataset_source = mlflow.data.get_source(dataset_info)
-dataset_source.load()
 
 # COMMAND ----------
+dataset_source.load() 

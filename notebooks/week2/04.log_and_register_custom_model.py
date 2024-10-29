@@ -29,7 +29,7 @@ spark = SparkSession.builder.getOrCreate()
 
 standard_experiment_name = "/Shared/wine-quality-basic" # Created in 03.log_and_register_model
 custom_experiment_name = "/Shared/wine-quality-custom-pyfunc"
-git_sha_id = "f6ee5171f4bc705b755af1ce4665cfdf98901e73"
+git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
 custom_model_artifact_path = "custom-pyfunc-wine-quality-model"
 custom_model_name = "wine-quality-model-custom-pyfunc"
 

@@ -379,15 +379,15 @@ wheels = [
 
 [[package]]
 name = "databricks-sdk"
-version = "0.32.3"
+version = "0.32.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-auth" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/2c/a6fe9382dc06a3bc5ce8ba5ddda2d8236cb81f85a1f0b7746eb329bd9277/databricks_sdk-0.32.3.tar.gz", hash = "sha256:bdb8acef3d79e83f05e7fca6cd6128b2b46a4bb4de240374c70050b5f029d4f2", size = 572703 }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/95/c6949a497390bcfb633dedb1fa9fe81ba96afbbd90bd4668939f9e1004e5/databricks_sdk-0.32.0.tar.gz", hash = "sha256:ede9db99fe87dabf549e47b9cb0ddabb1170d20d9d88d22386e727984eff3167", size = 568533 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0d/45/a740906549189c434033788446f202358a99301cb6b7884e9cac47578126/databricks_sdk-0.32.3-py3-none-any.whl", hash = "sha256:66b57cfd7731f541df014d136d5c257aa45ea4caa95d0d3fbaaed5b43142f32a", size = 555103 },
+    { url = "https://files.pythonhosted.org/packages/b5/a7/0f7ce505b256c4b25bd9ce2ffc4304a77e78f933e942d80f11809e2b0a28/databricks_sdk-0.32.0-py3-none-any.whl", hash = "sha256:980b3b25647d752a0a350e249701085a2e2d870764091f877d5cd00b96015d49", size = 551988 },
 ]
 
 [[package]]
@@ -1050,6 +1050,7 @@ dependencies = [
     { name = "cloudpickle" },
     { name = "databricks-feature-engineering" },
     { name = "databricks-feature-lookup" },
+    { name = "databricks-sdk" },
     { name = "lightgbm" },
     { name = "matplotlib" },
     { name = "mlflow" },
@@ -1077,6 +1078,7 @@ requires-dist = [
     { name = "databricks-connect", marker = "extra == 'dev'", specifier = ">=15.4.1,<16" },
     { name = "databricks-feature-engineering", specifier = ">=0.6,<1" },
     { name = "databricks-feature-lookup", specifier = "==1.2.0" },
+    { name = "databricks-sdk", specifier = "==0.32.0" },
     { name = "databricks-sdk", marker = "extra == 'dev'", specifier = ">=0.32.0,<0.33" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5,<7" },
     { name = "lightgbm", specifier = ">=4.5.0,<5" },
@@ -1088,7 +1090,7 @@ requires-dist = [
     { name = "psutil", specifier = "==6.0.0" },
     { name = "pyarrow", specifier = ">=14.0.1" },
     { name = "pydantic", specifier = "==2.9.2" },
-    { name = "scikit-learn", specifier = ">=1.5.1,<2" },
+    { name = "scikit-learn", specifier = ">=1.5.2,<2" },
     { name = "scipy", specifier = ">=1.14.1,<2" },
 ]
 

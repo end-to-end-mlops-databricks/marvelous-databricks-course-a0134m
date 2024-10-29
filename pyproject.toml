@@ -1,11 +1,11 @@
 [project]
-name = "mlops-with-databricks"
+name = "wine-quality"
 version = "0.0.1"
-description = "MLOps with Databricks"
+description = "MLOps with Databricks using Wine Quality"
 readme = "README.md"
 requires-python = ">=3.11, <3.12"
 dependencies = ["lightgbm>=4.5.0, <5",
-                "scikit-learn>=1.5.1, <2",
+                "scikit-learn>=1.5.2, <2",
                 "cloudpickle>=3.1.0, <4",
                 "mlflow>=2.17.0, <3",
                 "numpy>=1.26.4, <2",
@@ -16,6 +16,7 @@ dependencies = ["lightgbm>=4.5.0, <5",
                 "matplotlib>=3.9.2, <4",
                 "databricks-feature-engineering>=0.6, <1",
                 "databricks-feature-lookup==1.2.0",
+                "databricks-sdk==0.32.0",
                 "pydantic==2.9.2",
                 "psutil==6.0.0"
                 ]

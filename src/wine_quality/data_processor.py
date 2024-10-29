@@ -13,10 +13,27 @@ class DataProcessor:
 
     def preprocess(self):
         """Preprocess the DataFrame stored in self.df"""
+
+        # Convert data types
+        # self.df['col1'] = pd.to_numeric(self.df['col1'], errors='coerce')
+        # self.df['col2'] = pd.to_numeric(self.df['col2'], errors='coerce')
+
         # Handle numeric features
         num_features = self.config.num_features
         for col in num_features:
             self.df[col] = pd.to_numeric(self.df[col], errors='coerce')
+
+        # Fill missing values with mean or default values
+        # self.df.fillna({
+        #     'col1': self.df['col1'].mean(),
+        #     'col2': 'None',
+        #     'col3': 0,
+        # }, inplace=True)
+
+        # Convert categorical features to the appropriate type
+        # cat_features = self.config.cat_features
+        # for cat_col in cat_features:
+        #     self.df[cat_col] = self.df[cat_col].astype('category')
 
         # Extract target and relevant features
         target = self.config.target

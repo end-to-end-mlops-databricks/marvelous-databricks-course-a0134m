@@ -5,14 +5,18 @@ import mlflow
 
 mlflow.set_tracking_uri("databricks")
 
-mlflow.set_experiment(experiment_name="/Shared/wine-quality-basic")
-mlflow.set_experiment_tags({"repository_name": "wine-quality"})
+experiment_name = "/Shared/wine-quality-basic"
+repo_name = "wine_quality"
+git_sha_id = "f6ee5171f4bc705b755af1ce4665cfdf98901e73"
 
-git_sha_id = "ffa63b430205ff7"
+mlflow.set_experiment(experiment_name=experiment_name)
+mlflow.set_experiment_tags({"repository_name": repo_name})
+
+
 
 # COMMAND ----------
 experiments = mlflow.search_experiments(
-    filter_string="tags.repository_name='house-price'"
+    filter_string=f"tags.repository_name='{repo_name}'"
 )
 print(experiments)
 
@@ -31,8 +35,8 @@ with mlflow.start_run(
     mlflow.log_metrics({"metric1": 1.0, "metric2": 2.0})
 # COMMAND ----------
 run_id = mlflow.search_runs(
-    experiment_names=["/Shared/house-price-basic"],
-    filter_string=f"tags.git_sha={git_sha_id}",
+    experiment_names=[experiment_name],
+    filter_string=f"tags.git_sha='{git_sha_id}'",
 ).run_id[0]
 run_info = mlflow.get_run(run_id=f"{run_id}").to_dictionary()
 print(run_info)

@@ -132,5 +132,3 @@ model = mlflow.pyfunc.load_model(model_uri)
 
 # COMMAND ----------
 client.get_model_version_by_alias(model_name, model_version_alias)
-# COMMAND ----------
-model

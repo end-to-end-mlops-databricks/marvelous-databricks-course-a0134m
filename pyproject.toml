@@ -16,7 +16,6 @@ dependencies = ["lightgbm>=4.5.0, <5",
                 "matplotlib>=3.9.2, <4",
                 "databricks-feature-engineering>=0.6, <1",
                 "databricks-feature-lookup==1.2.0",
-                "databricks-sdk==0.32.0",
                 "pydantic==2.9.2",
                 "psutil==6.0.0"
                 ]
@@ -25,7 +24,8 @@ dependencies = ["lightgbm>=4.5.0, <5",
 dev = ["databricks-connect>=15.4.1, <16",
        "databricks-sdk>=0.32.0, <0.33",
        "ipykernel>=6.29.5, <7",
-       "pip>=24.2"]
+       "pip>=24.2",
+       "pytest>=8.3.3"]
 
 [tool.ruff]
 line-length = 120

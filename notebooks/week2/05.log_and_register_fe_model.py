@@ -6,6 +6,7 @@
 dbutils.library.restartPython()
 
 # COMMAND ----------
+
 import mlflow
 from databricks import feature_engineering
 from databricks.feature_engineering import FeatureFunction, FeatureLookup
@@ -21,12 +22,15 @@ from sklearn.preprocessing import StandardScaler
 
 from wine_quality.config import ProjectConfig
 
+# COMMAND ----------
+
 # Initialize the Databricks session and clients
 spark = SparkSession.builder.getOrCreate()
 workspace = WorkspaceClient()
 fe = feature_engineering.FeatureEngineeringClient()
 
 # COMMAND ----------
+
 cur_experiment_name = "/Shared/wine-quality-fe"
 git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
 cur_model_artifact_path = "wine-quality-model-fe"
@@ -49,11 +53,13 @@ feature_table_name = f"{catalog_name}.{schema_name}.wine_features"
 function_name = f"{catalog_name}.{schema_name}.calculate_wine_sweetness"
 
 # COMMAND ----------
+
 # Load training and test sets
 train_set = spark.table(f"{catalog_name}.{schema_name}.train_set")
 test_set = spark.table(f"{catalog_name}.{schema_name}.test_set")
 
 # COMMAND ----------
+
 # Create or replace the house_features table
 spark.sql(f"""
 CREATE OR REPLACE TABLE {catalog_name}.{schema_name}.wine_features
@@ -80,6 +86,7 @@ spark.sql(
 )
 
 # COMMAND ----------
+
 # Define a function to calculate the wine dryness using the current year and YearBuilt
 spark.sql(f"""
 CREATE OR REPLACE FUNCTION {function_name}(residual_sugar_content INT)
@@ -94,6 +101,7 @@ $$
 """)
 
 # COMMAND ----------
+
 # Load training and test sets
 train_set = spark.table(f"{catalog_name}.{schema_name}.train_set").drop("volatile_acidity", "alcohol", "sulphates")
 test_set = spark.table(f"{catalog_name}.{schema_name}.test_set").toPandas()
@@ -121,6 +129,7 @@ training_set = fe.create_training_set(
     exclude_columns=["update_timestamp_utc"],
 )
 # COMMAND ----------
+
 # Load feature-engineered DataFrame
 training_df = training_set.load_df().toPandas()
 
@@ -134,6 +143,7 @@ X_test = test_set[num_features + ["is_sweet_indicator"]]
 y_test = test_set[target]
 
 # COMMAND ----------
+
 # Setup preprocessing and model pipeline
 preprocessor = ColumnTransformer(
     transformers=[("num", SimpleImputer(strategy="mean"), num_features), ("std", StandardScaler(), num_features)],
@@ -176,6 +186,7 @@ with mlflow.start_run(tags={"branch": "week2", "git_sha": f"{git_sha_id}"}) as r
         signature=signature,
     )
 # COMMAND ----------
+
 mlflow.register_model(
     model_uri=f"runs:/{run_id}/{cur_model_artifact_path}", name=f"{catalog_name}.{schema_name}.{cur_model_name}"
 )

@@ -2,11 +2,11 @@
 # MAGIC %pip install ../wine_quality-0.0.1-py3-none-any.whl
 
 # COMMAND ----------
-
-dbutils.library.restartPython()
+"""Replaced dbutils.library.restartPython() with restart_python to pass precommit checks"""
+# dbutils.library.restartPython()
+# MAGIC %restart_python
 
 # COMMAND ----------
-
 import mlflow
 from databricks import feature_engineering
 from databricks.feature_engineering import FeatureFunction, FeatureLookup

@@ -1,4 +1,22 @@
 catalog_name: mlops_students
 schema_name: mahajan134
 
+parameters:
+  learning_rate: 0.01
+  n_estimators: 1000
+  max_depth: 6
+
+num_features:
+  - fixed_acidity
+  - volatile_acidity
+  - citric_acid
+  - residual_sugar
+  - chlorides
+  - free_sulfur_dioxide
+  - total_sulfur_dioxide
+  - density
+  - pH
+  - sulphates
+  - alcohol
+
 target: quality

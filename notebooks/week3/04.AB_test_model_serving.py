@@ -5,24 +5,24 @@
 # MAGIC %restart_python
 
 # COMMAND ----------
+import hashlib
 import time
 
 import mlflow
 import pandas as pd
+import requests
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedEntityInput
 from lightgbm import LGBMRegressor
 from mlflow import MlflowClient
 from mlflow.models import infer_signature
+from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
-import hashlib
-import requests
 
 from wine_quality.config import ProjectConfig
 
@@ -57,6 +57,10 @@ parameters_b = {
     "n_estimators": ab_test_params["n_estimators"],
     "max_depth": ab_test_params["max_depth_b"],
 }
+
+# COMMAND ----------
+spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 # COMMAND ----------
 
@@ -108,7 +112,7 @@ with mlflow.start_run(tags={"model_class": "A", "git_sha": git_sha}) as run:
 
     # Train the model
     pipeline.fit(X_train, y_train)
-    y_pred = pipeline.predict(X_test) 
+    y_pred = pipeline.predict(X_test)
 
     # Calculate performance metrics
     mse = mean_squared_error(y_test, y_pred)
@@ -124,9 +128,7 @@ with mlflow.start_run(tags={"model_class": "A", "git_sha": git_sha}) as run:
     signature = infer_signature(model_input=X_train, model_output=y_pred)
 
     # Log the input dataset for tracking reproducibility
-    dataset = mlflow.data.from_spark(train_set_spark,
-                                     table_name=f"{catalog_name}.{schema_name}.train_set",
-                                     version="0")
+    dataset = mlflow.data.from_spark(train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
     mlflow.log_input(dataset, context="training")
 
     # Log the pipeline model in MLflow with a unique artifact path
@@ -178,8 +180,7 @@ with mlflow.start_run(tags={"model_class": "B", "git_sha": git_sha}) as run:
     mlflow.log_metric("r2_score", r2)
     signature = infer_signature(model_input=X_train, model_output=y_pred)
 
-    dataset = mlflow.data.from_spark(train_set_spark,
-                                     table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
+    dataset = mlflow.data.from_spark(train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
     mlflow.log_input(dataset, context="training")
     mlflow.sklearn.log_model(sk_model=pipeline, artifact_path="lightgbm-pipeline-model", signature=signature)
 
@@ -233,16 +234,14 @@ class WineQualityModelWrapper(mlflow.pyfunc.PythonModel):
 
 # COMMAND ----------
 X_train = train_set[num_features + ["id"]]
-X_test = test_set[num_features  + ["id"]]
+X_test = test_set[num_features + ["id"]]
 
 
 # COMMAND ----------
 models = [model_A, model_B]
 wrapped_model = WineQualityModelWrapper(models)  # we pass the loaded models to the wrapper
 example_input = X_test.iloc[0:1]  # Select the first row for prediction as example
-example_prediction = wrapped_model.predict(
-    context=None,
-    model_input=example_input)
+example_prediction = wrapped_model.predict(context=None, model_input=example_input)
 print("Example Prediction:", example_prediction)
 
 # COMMAND ----------
@@ -251,22 +250,16 @@ model_name = f"{catalog_name}.{schema_name}.wine_quality_model_pyfunc_ab_test"
 
 with mlflow.start_run() as run:
     run_id = run.info.run_id
-    signature = infer_signature(model_input=X_train,
-                                model_output={"Prediction": 1234.5,
-                                              "model": "Model B"})
-    dataset = mlflow.data.from_spark(train_set_spark,
-                                     table_name=f"{catalog_name}.{schema_name}.train_set",
-                                     version="0")
+    signature = infer_signature(model_input=X_train, model_output={"Prediction": 1234.5, "model": "Model B"})
+    dataset = mlflow.data.from_spark(train_set_spark, table_name=f"{catalog_name}.{schema_name}.train_set", version="0")
     mlflow.log_input(dataset, context="training")
     mlflow.pyfunc.log_model(
-        python_model=wrapped_model,# passing wrapped model here instead sklearn model
+        python_model=wrapped_model,  # passing wrapped model here instead sklearn model
         artifact_path="pyfunc-wine-quality-model-ab",
-        signature=signature
+        signature=signature,
     )
 model_version = mlflow.register_model(
-    model_uri=f"runs:/{run_id}/pyfunc-wine-quality-model-ab",
-    name=model_name,
-    tags={"git_sha": f"{git_sha}"}
+    model_uri=f"runs:/{run_id}/pyfunc-wine-quality-model-ab", name=model_name, tags={"git_sha": f"{git_sha}"}
 )
 
 # COMMAND ----------
@@ -276,7 +269,7 @@ model = mlflow.pyfunc.load_model(model_uri=f"models:/{model_name}/{model_version
 predictions = model.predict(X_test.iloc[0:1])
 
 # Display predictions
-predictions
+# predictions
 
 # COMMAND ----------
 
@@ -313,7 +306,6 @@ except Exception as e:
 # MAGIC ### Call the endpoint
 
 # COMMAND ----------
-
 token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
 host = spark.conf.get("spark.databricks.workspaceUrl")
 
@@ -342,9 +334,7 @@ dataframe_records = [[record] for record in sampled_records]
 
 start_time = time.time()
 
-model_serving_endpoint = (
-    f"https://{host}/serving-endpoints/wine-quality-model-serving-ab-test/invocations"
-)
+model_serving_endpoint = f"https://{host}/serving-endpoints/wine-quality-model-serving-ab-test/invocations"
 
 response = requests.post(
     f"{model_serving_endpoint}",

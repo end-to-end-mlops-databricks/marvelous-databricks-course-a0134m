@@ -6,25 +6,24 @@
 
 # COMMAND ----------
 
+import random
 import time
-
-import requests
-import random 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import requests
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.serving import (
     EndpointCoreConfigInput,
     ServedEntityInput,
-    TrafficConfig,
-    Route,
 )
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 
 from wine_quality.config import ProjectConfig
-from pyspark.sql import SparkSession
 
 workspace = WorkspaceClient()
 spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 config = ProjectConfig.from_yaml(config_path="../../project_config.yml")
 
@@ -45,13 +44,13 @@ try:
                     entity_version=3,
                 )
             ],
-        # # Optional if only 1 entity is served
-        # traffic_config=TrafficConfig(
-        #     routes=[
-        #         Route(served_model_name="wine_quality_model-3",
-        #               traffic_percentage=100)
-        #     ]
-        #     ),
+            # # Optional if only 1 entity is served
+            # traffic_config=TrafficConfig(
+            #     routes=[
+            #         Route(served_model_name="wine_quality_model-3",
+            #               traffic_percentage=100)
+            #     ]
+            #     ),
         ),
     )
 except Exception as e:
@@ -88,7 +87,7 @@ required_columns = [
     "density",
     "pH",
     "sulphates",
-    "alcohol"
+    "alcohol",
 ]
 
 sampled_records = train_set[required_columns].sample(n=1000, replace=True).to_dict(orient="records")
@@ -118,9 +117,7 @@ Each body should be list of json with columns
 # COMMAND ----------
 start_time = time.time()
 
-model_serving_endpoint = (
-    f"https://{host}/serving-endpoints/wine-quality-model-serving/invocations"
-)
+model_serving_endpoint = f"https://{host}/serving-endpoints/wine-quality-model-serving/invocations"
 response = requests.post(
     f"{model_serving_endpoint}",
     headers={"Authorization": f"Bearer {token}"},
@@ -142,9 +139,7 @@ print("Execution time:", execution_time, "seconds")
 # COMMAND ----------
 
 # Initialize variables
-model_serving_endpoint = (
-    f"https://{host}/serving-endpoints/wine-quality-model-serving/invocations"
-)
+model_serving_endpoint = f"https://{host}/serving-endpoints/wine-quality-model-serving/invocations"
 
 headers = {"Authorization": f"Bearer {token}"}
 num_requests = 1000

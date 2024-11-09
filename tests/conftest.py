@@ -1,9 +1,10 @@
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 from pyspark.sql import SparkSession
+
 from src.wine_quality.config import ProjectConfig
-from src.wine_quality.data_processor import DataProcessor
 
 
 @pytest.fixture(scope="session")

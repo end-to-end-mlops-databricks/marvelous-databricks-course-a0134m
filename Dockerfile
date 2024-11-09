@@ -1,4 +1,4 @@
-FROM databricksruntime/python:15.4-LTS 
+FROM databricksruntime/python:15.4-LTS
 
 ARG PROJECT_DIR=/project
 

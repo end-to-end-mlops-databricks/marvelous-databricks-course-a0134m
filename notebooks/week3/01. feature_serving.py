@@ -32,6 +32,7 @@ from databricks.sdk.service.catalog import (
     OnlineTableSpecTriggeredSchedulingPolicy,
 )
 from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedEntityInput
+from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
 
 from wine_quality.config import ProjectConfig
@@ -40,11 +41,12 @@ from wine_quality.config import ProjectConfig
 
 # MAGIC %md
 # MAGIC ## Deploy and query a feature serving endpoint
-https://docs.databricks.com/en/machine-learning/feature-store/feature-serving-tutorial.html
+# MAGIC https://docs.databricks.com/en/machine-learning/feature-store/feature-serving-tutorial.html
 
 # COMMAND ----------
 
 spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 # Initialize Databricks clients
 workspace = WorkspaceClient()
@@ -122,14 +124,14 @@ spec = OnlineTableSpec(
     perform_full_copy=False,
 )
 
-#Create the online table in Databricks
+# Create the online table in Databricks
 try:
     online_table_pipeline = workspace.online_tables.create(name=online_table_name, spec=spec)
 except Exception as e:
- if "already exists" in str(e):
-   pass
- else:
-   raise e
+    if "already exists" in str(e):
+        pass
+    else:
+        raise e
 
 online_table_pipeline = workspace.online_tables.get(name=online_table_name)
 
@@ -139,7 +141,9 @@ online_table_pipeline = workspace.online_tables.get(name=online_table_name)
 # Define features to look up from the feature table
 features = [
     FeatureLookup(
-        table_name=feature_table_name, lookup_key="id", feature_names=[ "volatile_acidity", "alcohol", "sulphates", "quality"]
+        table_name=feature_table_name,
+        lookup_key="id",
+        feature_names=["volatile_acidity", "alcohol", "sulphates", "quality"],
     )
 ]
 
@@ -175,7 +179,7 @@ try:
             served_entities=[
                 ServedEntityInput(
                     entity_name=feature_spec_name,  # feature spec name defined in the previous step
-                    scale_to_zero_enabled=True, # Cost saving mechanism where the endpoint scales down to zero when not in use
+                    scale_to_zero_enabled=True,  # Cost saving mechanism where the endpoint scales down to zero when not in use
                     workload_size="Small",  # Define the workload size (Small, Medium, Large)
                 )
             ]
@@ -248,6 +252,7 @@ id_list = preds_df.select("Id").rdd.flatMap(lambda x: x).collect()
 headers = {"Authorization": f"Bearer {token}"}
 num_requests = 10
 
+
 # COMMAND ----------
 # Function to make a request and record latency
 def send_request():
@@ -261,6 +266,8 @@ def send_request():
     end_time = time.time()
     latency = end_time - start_time  # Calculate latency for this request
     return response.status_code, latency
+
+
 # COMMAND ----------
 
 # Measure total execution time
@@ -282,4 +289,4 @@ total_execution_time = total_end_time - total_start_time
 average_latency = sum(latencies) / len(latencies)
 
 print("\nTotal execution time:", total_execution_time, "seconds")
-print("Average latency per request:", average_latency, "seconds") 
+print("Average latency per request:", average_latency, "seconds")

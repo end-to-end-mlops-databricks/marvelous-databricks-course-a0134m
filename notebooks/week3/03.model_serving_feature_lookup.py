@@ -21,11 +21,13 @@ from databricks.sdk.service.catalog import (
     OnlineTableSpecTriggeredSchedulingPolicy,
 )
 from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedEntityInput
+from pyspark.dbutils import DBUtils
 from pyspark.sql import SparkSession
 
 from wine_quality.config import ProjectConfig
 
 spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 
 # Initialize Databricks clients
 workspace = WorkspaceClient()
@@ -47,14 +49,14 @@ spec = OnlineTableSpec(
     perform_full_copy=False,
 )
 
-#Create the online table in Databricks
+# Create the online table in Databricks
 try:
     online_table_pipeline = workspace.online_tables.create(name=online_table_name, spec=spec)
 except Exception as e:
- if "already exists" in str(e):
-   pass
- else:
-   raise e
+    if "already exists" in str(e):
+        pass
+    else:
+        raise e
 
 # COMMAND ----------
 
@@ -127,7 +129,7 @@ dataframe_records = [[record] for record in sampled_records]
 
 # COMMAND ----------
 
-train_set.dtypes
+train_set_dtypes = train_set.dtypes
 
 # COMMAND ----------
 
@@ -157,4 +159,4 @@ wine_features = spark.table(f"{catalog_name}.{schema_name}.wine_features").toPan
 
 # COMMAND ----------
 
-wine_features.dtypes
+wine_features_dtypes = wine_features.dtypes

@@ -19,7 +19,7 @@ In our examples, we use UV. Check out the documentation on how to install it: ht
 To create a new environment and create a lockfile, run:
 
 ```
-uv venv -p 3.11.10 .venv
+uv venv -p 3.11 .venv
 source .venv/bin/activate
 uv pip install -r pyproject.toml --all-extras
 uv lock

@@ -59,7 +59,8 @@ except Exception as e:
 # COMMAND ----------
 
 
-config = ProjectConfig.from_yaml(config_path="/Volumes/mlops_students/mahajan134/mlops_vol/project_config.yml")
+# config = ProjectConfig.from_yaml(config_path="/Volumes/mlops_students/mahajan134/mlops_vol/project_config.yml")
+config = ProjectConfig.from_yaml(config_path="../../project_config.yml")
 
 catalog_name = config.catalog_name
 schema_name = config.schema_name
@@ -116,10 +117,10 @@ required_columns = [
     "pH",
     "sulphates",
     "alcohol",
-    "id",
+    "Id",
 ]
 
-train_set = spark.table(f"{catalog_name}.{schema_name}.train_set").toPandas()
+train_set = spark.table(f"{catalog_name}.{schema_name}.train_set").withColumnRenamed("id", "Id").toPandas()
 
 sampled_records = train_set[required_columns].sample(n=1000, replace=True).to_dict(orient="records")
 dataframe_records = [[record] for record in sampled_records]

@@ -6,6 +6,13 @@ parameters:
   n_estimators: 1000
   max_depth: 6
 
+ab_test:
+  learning_rate_a: 0.02
+  learning_rate_b: 0.02
+  n_estimators: 1000
+  max_depth_a: 6
+  max_depth_b: 10
+
 num_features:
   - fixed_acidity
   - volatile_acidity

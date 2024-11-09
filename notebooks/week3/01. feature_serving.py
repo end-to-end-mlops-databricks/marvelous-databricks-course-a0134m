@@ -99,7 +99,7 @@ preds_df["quality"] = pipeline.predict(df[num_features])
 
 preds_df = spark.createDataFrame(preds_df)
 
-# 1. Create the feature table in Databricks
+# 1. Create the feature table in Databricks. Also referred sometimes as offline table.
 # NOTE: Data type for id column must be STRING
 fe.create_table(
     name=feature_table_name, primary_keys=["id"], df=preds_df, description="Wine quality predictions feature table"
@@ -113,7 +113,7 @@ spark.sql(f"""
 
 # COMMAND ----------
 
-# 2. Create the online table using feature table
+# 2. Create the online table using feature table created in the previous step
 
 spec = OnlineTableSpec(
     primary_key_columns=["id"],
@@ -143,7 +143,7 @@ features = [
     )
 ]
 
-# Create the feature spec for serving
+# Create the feature spec  - This is entity that we serve in our model serving endpoint
 feature_spec_name = f"{catalog_name}.{schema_name}.wine_quality_returned_predictions"
 
 # Create the feature spec for serving
@@ -175,7 +175,7 @@ try:
             served_entities=[
                 ServedEntityInput(
                     entity_name=feature_spec_name,  # feature spec name defined in the previous step
-                    scale_to_zero_enabled=True,
+                    scale_to_zero_enabled=True, # Cost saving mechanism where the endpoint scales down to zero when not in use
                     workload_size="Small",  # Define the workload size (Small, Medium, Large)
                 )
             ]
@@ -198,7 +198,8 @@ print(status)
 # MAGIC ## Call The Endpoint
 
 # COMMAND ----------
-
+# Option: Temp token from notebook context or use PAT - neither is best practice
+# Production setup: In Azure  use M2M entra id which is valid for 16 min and you have to rotate it
 token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
 host = spark.conf.get("spark.databricks.workspaceUrl")
 
@@ -207,6 +208,7 @@ host = spark.conf.get("spark.databricks.workspaceUrl")
 id_list = preds_df["id"]
 
 # COMMAND ----------
+# See MLServe docs or MLFlow serving docs for more details on invocations pattern
 start_time = time.time()
 serving_endpoint = f"https://{host}/serving-endpoints/wine-quality-feature-serving/invocations"
 response = requests.post(
@@ -224,6 +226,9 @@ print("Execution time:", execution_time, "seconds")
 
 # COMMAND ----------
 # another way to call the endpoint
+""" If we have multiple records and multiple columns to query:
+json={"dataframe_split": {"columns": ["id", "location"], "data": [["25", "New York"], ["26", "San Francisco"]]}},
+"""
 
 response = requests.post(
     f"{serving_endpoint}",
@@ -234,6 +239,7 @@ response = requests.post(
 # COMMAND ----------
 # MAGIC %md
 # MAGIC ## Load Test
+# MAGIC Send multiple requests concurrently and calculate average reponse to measure latency
 
 # COMMAND ----------
 # Initialize variables

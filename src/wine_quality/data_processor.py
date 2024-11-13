@@ -36,9 +36,11 @@ class DataProcessor:
         #     self.df[cat_col] = self.df[cat_col].astype('category')
 
         # Extract target and relevant features
+        # Converting ID to string, require for serving to avoid issues
         target = self.config.target
         relevant_columns = num_features + [target] + ["id"]
         self.df = self.df[relevant_columns]
+        self.df["id"] = self.df["id"].astype("str")
 
     def split_data(self, test_size=0.2, random_state=42):
         """Split the DataFrame (self.df) into training and test sets."""

@@ -87,7 +87,7 @@ spark.sql(
 
 # COMMAND ----------
 
-# Define a function to calculate the wine dryness using the current year and YearBuilt
+# Define a function to calculate the wine dryness using residual sugar content
 spark.sql(f"""
 CREATE OR REPLACE FUNCTION {function_name}(residual_sugar_content INT)
 RETURNS INT

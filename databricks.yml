@@ -4,16 +4,132 @@
 
 bundle:
   name: marvelous-databricks-course-a0134m
+  #databricks_cli_version: "0.230.0"
+  cluster_id: 1018-024853-shr990fc
+
+permissions:
+  - level: CAN_MANAGE
+    user_name: mahajan134@gmail.com
+
+artifacts:
+  default:
+    type: whl
+    build: uv build --wheel
+    # build: python -m build
+    path: .
+
+variables:
+  root_path:
+    description: root_path for the target
+    # default: /Shared/.bundle/${bundle.target}/${bundle.name}
+    default: /Workspace/Users/mahajan134@gmail.com/.bundle/marvelous-databricks-course-a0134m/dev/files
+  git_sha:
+    description: git_sha
+    default: abcd
+  schedule_pause_status:
+    description: schedule pause status
+    default: UNPAUSED
 
 targets:
+  prod:
+    workspace:
+      host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
+      root_path: ${var.root_path}
+
   dev:
     mode: development
     default: true
     workspace:
       host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
+      # root_path: /Workspace/Users/mahajan134@gmail.com/.bundle/${bundle.name}/dev
 
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
+resources:
+  jobs:
+    wine-quality:
+      name: wine-quality-workflow
+      schedule:
+        quartz_cron_expression: "0 0 10 ? * MONDAY *"
+        timezone_id: "America/Chicago"
+        pause_status: ${var.schedule_pause_status}
+      tags:
+        project_name: "wine-quality"
+      job_clusters:
+        - job_cluster_key: "wine-quality-cluster"
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            data_security_mode: "SINGLE_USER"
+            node_type_id: "r3.xlarge"
+            driver_node_type_id: "r3.xlarge"
+            autoscale:
+              min_workers: 1
+              max_workers: 1
+
+      tasks:
+        - task_key: "preprocessing"
+          job_cluster_key: "wine-quality-cluster"
+          spark_python_task:
+            python_file: "week5/preprocess.py"
+            parameters:
+              - "--root_path"
+              - ${var.root_path}
+          libraries:
+          - whl: ./dist/*.whl
+        - task_key: if_refreshed
+          condition_task:
+            op: "EQUAL_TO"
+            left: "{{tasks.preprocessing.values.refreshed}}"
+            right: "1"
+          depends_on:
+            - task_key: "preprocessing"
+        - task_key: "train_model"
+          depends_on:
+            - task_key: "if_refreshed"
+              outcome: "true"
+          job_cluster_key: "wine-quality-cluster"
+          spark_python_task:
+            python_file: "week5/train_model.py"
+            parameters:
+              - "--root_path"
+              - ${var.root_path}
+              - "--git_sha"
+              - ${var.git_sha}
+              - "--job_run_id"
+              - "{{job.id}}"
+          libraries:
+            - whl: ./dist/*.whl
+        - task_key: "evaluate_model"
+          depends_on:
+            - task_key: "train_model"
+          job_cluster_key: "wine-quality-cluster"
+          spark_python_task:
+            python_file: "week5/evaluate_model.py"
+            parameters:
+              - "--root_path"
+              - ${var.root_path}
+              - "--new_model_uri"
+              - "{{tasks.train_model.values.new_model_uri}}"
+              - "--job_run_id"
+              - "{{job.id}}"
+              - "--git_sha"
+              - ${var.git_sha}
+          libraries:
+            - whl: ./dist/*.whl
+        - task_key: model_update
+          condition_task:
+            op: "EQUAL_TO"
+            left: "{{tasks.evaluate_model.values.model_update}}"
+            right: "1"
+          depends_on:
+            - task_key: "evaluate_model"
+        - task_key: "deploy_model"
+          depends_on:
+            - task_key: "model_update"
+              outcome: "true"
+          job_cluster_key: "wine-quality-cluster"
+          spark_python_task:
+            python_file: "week5/deploy_model.py"
+            parameters:
+              - "--root_path"
+              - ${var.root_path}
+          libraries:
+            - whl: ./dist/*.whl

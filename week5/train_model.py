@@ -1,45 +1,81 @@
-# Databricks notebook source
-# MAGIC %pip install ../wine_quality-0.0.1-py3-none-any.whl
+"""
+This script trains a LightGBM model for house price prediction with feature engineering.
+Key functionality:
+- Loads training and test data from Databricks tables
+- Performs feature engineering using Databricks Feature Store
+- Creates a pipeline with preprocessing and LightGBM regressor
+- Tracks the experiment using MLflow
+- Logs model metrics, parameters and artifacts
+- Handles feature lookups and custom feature functions
+- Outputs model URI for downstream tasks
 
-# COMMAND ----------
-"""Replaced dbutils.library.restartPython() with restart_python to pass precommit checks"""
-# dbutils.library.restartPython()
-# MAGIC %restart_python
+The model uses numerical features, including a custom calculated wine sweetness feature.
+"""
 
-# COMMAND ----------
-import mlflow
 from databricks import feature_engineering
-from databricks.feature_engineering import FeatureFunction, FeatureLookup
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 from databricks.sdk import WorkspaceClient
+import mlflow
+import argparse
+from datetime import datetime
 from lightgbm import LGBMRegressor
 from mlflow.models import infer_signature
-from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
+from databricks.feature_engineering import FeatureFunction, FeatureLookup
 from wine_quality.config import ProjectConfig
 
-# COMMAND ----------
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--root_path",
+    action="store",
+    default=None,
+    type=str,
+    required=True,
+)
+parser.add_argument(
+    "--git_sha",
+    action="store",
+    default=None,
+    type=str,
+    required=True,
+)
+parser.add_argument(
+    "--job_run_id",
+    action="store",
+    default=None,
+    type=str,
+    required=True,
+)
+
+args = parser.parse_args()
+root_path = args.root_path
+git_sha = args.git_sha
+job_run_id = args.job_run_id
+cur_experiment_name = "/Shared/wine-quality-fe"
+cur_model_artifact_path = "wine-quality-model-fe"
+
+
+config_path = (f"{root_path}/project_config.yml")
+# config_path = ("/Volumes/mlops_students/mahajan134/mlops_vol/project_config.yml")
+
+config = ProjectConfig.from_yaml(config_path=config_path)
 
 # Initialize the Databricks session and clients
 spark = SparkSession.builder.getOrCreate()
+dbutils = DBUtils(spark)
 workspace = WorkspaceClient()
 fe = feature_engineering.FeatureEngineeringClient()
 
-# COMMAND ----------
-
-cur_experiment_name = "/Shared/wine-quality-fe"
-git_sha_id = "a14d4efd57456e49657cd2b6c40518b90c28407f"
-cur_model_artifact_path = "wine-quality-model-fe"
-cur_model_name = "wine-quality-model-fe"
-
 mlflow.set_registry_uri("databricks-uc")
 mlflow.set_tracking_uri("databricks")
-
-config = ProjectConfig.from_yaml(config_path="../../project_config.yml")
 
 # Extract configuration details
 num_features = config.num_features
@@ -48,59 +84,10 @@ parameters = config.parameters
 catalog_name = config.catalog_name
 schema_name = config.schema_name
 
+
 # Define table names and function name
 feature_table_name = f"{catalog_name}.{schema_name}.wine_features"
 function_name = f"{catalog_name}.{schema_name}.calculate_wine_sweetness"
-
-# COMMAND ----------
-
-# Load training and test sets
-train_set = spark.table(f"{catalog_name}.{schema_name}.train_set")
-test_set = spark.table(f"{catalog_name}.{schema_name}.test_set")
-
-# COMMAND ----------
-
-# Create or replace the wine_features table
-spark.sql(f"""
-CREATE OR REPLACE TABLE {catalog_name}.{schema_name}.wine_features
-(Id STRING NOT NULL,
- volatile_acidity double,
- alcohol double,
- sulphates double);
-""")
-
-spark.sql(f"ALTER TABLE {catalog_name}.{schema_name}.wine_features " "ADD CONSTRAINT wine_pk PRIMARY KEY(Id);")
-
-spark.sql(
-    f"ALTER TABLE {catalog_name}.{schema_name}.wine_features " "SET TBLPROPERTIES (delta.enableChangeDataFeed = true);"
-)
-
-# Insert data into the feature table from both train and test sets
-spark.sql(
-    f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
-    f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.train_set"
-)
-spark.sql(
-    f"INSERT INTO {catalog_name}.{schema_name}.wine_features "
-    f"SELECT Id, volatile_acidity, alcohol, sulphates FROM {catalog_name}.{schema_name}.test_set"
-)
-
-# COMMAND ----------
-
-# Define a function to calculate the wine dryness using residual sugar content
-spark.sql(f"""
-CREATE OR REPLACE FUNCTION {function_name}(residual_sugar_content INT)
-RETURNS INT
-LANGUAGE PYTHON AS
-$$
-if residual_sugar_content > 40:
-    return 1
-else:
-    return 0
-$$
-""")
-
-# COMMAND ----------
 
 # Load training and test sets
 train_set = spark.table(f"{catalog_name}.{schema_name}.train_set").drop("volatile_acidity", "alcohol", "sulphates")
@@ -108,7 +95,8 @@ test_set = spark.table(f"{catalog_name}.{schema_name}.test_set").toPandas()
 
 # Cast residual_sugar to int for the function input
 train_set = train_set.withColumn("residual_sugar", train_set["residual_sugar"].cast("int"))
-train_set = train_set.withColumn("Id", train_set["Id"].cast("string"))
+train_set = train_set.withColumn("Id", train_set["id"].cast("string"))
+
 
 # Feature engineering setup
 training_set = fe.create_training_set(
@@ -126,9 +114,8 @@ training_set = fe.create_training_set(
             input_bindings={"residual_sugar_content": "residual_sugar"},
         ),
     ],
-    exclude_columns=["update_timestamp_utc"],
+    exclude_columns=["update_timestamp_utc"]
 )
-# COMMAND ----------
 
 # Load feature-engineered DataFrame
 training_df = training_set.load_df().toPandas()
@@ -142,8 +129,6 @@ y_train = training_df[target]
 X_test = test_set[num_features + ["is_sweet_indicator"]]
 y_test = test_set[target]
 
-# COMMAND ----------
-
 # Setup preprocessing and model pipeline
 preprocessor = ColumnTransformer(
     transformers=[("num", SimpleImputer(strategy="mean"), num_features), ("std", StandardScaler(), num_features)],
@@ -153,10 +138,12 @@ preprocessor = ColumnTransformer(
 # Create the pipeline with preprocessing and the LightGBM regressor
 pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("regressor", LGBMRegressor(**parameters))])
 
-# Set and start MLflow experiment
+
 mlflow.set_experiment(experiment_name=cur_experiment_name)
 
-with mlflow.start_run(tags={"branch": "week2", "git_sha": f"{git_sha_id}"}) as run:
+with mlflow.start_run(tags={"branch": "week5",
+                            "git_sha": f"{git_sha}",
+                            "job_run_id": job_run_id}) as run:
     run_id = run.info.run_id
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
@@ -185,8 +172,6 @@ with mlflow.start_run(tags={"branch": "week2", "git_sha": f"{git_sha_id}"}) as r
         training_set=training_set,
         signature=signature,
     )
-# COMMAND ----------
 
-mlflow.register_model(
-    model_uri=f"runs:/{run_id}/{cur_model_artifact_path}", name=f"{catalog_name}.{schema_name}.{cur_model_name}"
-)
+model_uri=f'runs:/{run_id}/{cur_model_artifact_path}'
+dbutils.jobs.taskValues.set(key="new_model_uri", value=model_uri)

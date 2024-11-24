@@ -1,5 +1,6 @@
 catalog_name: mlops_students
 schema_name: mahajan134
+pipeline_id: 5d52b992-0c14-4abe-a8d8-3880ad86fe93
 
 parameters:
   learning_rate: 0.01

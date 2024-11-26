@@ -12,25 +12,24 @@ Key functionality:
 The model uses numerical features, including a custom calculated wine sweetness feature.
 """
 
-from databricks import feature_engineering
-from pyspark.dbutils import DBUtils
-from pyspark.sql import SparkSession
-from databricks.sdk import WorkspaceClient
-import mlflow
 import argparse
-from datetime import datetime
+
+import mlflow
+from databricks import feature_engineering
+from databricks.feature_engineering import FeatureFunction, FeatureLookup
+from databricks.sdk import WorkspaceClient
 from lightgbm import LGBMRegressor
 from mlflow.models import infer_signature
-from pyspark.sql import functions as F
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from databricks.feature_engineering import FeatureFunction, FeatureLookup
+from workspace_utils import get_env_config_file
+
 from wine_quality.config import ProjectConfig
-
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -54,6 +53,13 @@ parser.add_argument(
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--env",
+    action="store",
+    default=None,
+    type=str,
+    required=True,
+)
 
 args = parser.parse_args()
 root_path = args.root_path
@@ -63,9 +69,10 @@ cur_experiment_name = "/Shared/wine-quality-fe"
 cur_model_artifact_path = "wine-quality-model-fe"
 
 
-config_path = (f"{root_path}/project_config.yml")
+# config_path = (f"{root_path}/project_config.yml")
 # config_path = ("/Volumes/mlops_students/mahajan134/mlops_vol/project_config.yml")
-
+config_file_name = get_env_config_file(args.env)
+config_path = f"{root_path}/{config_file_name}"
 config = ProjectConfig.from_yaml(config_path=config_path)
 
 # Initialize the Databricks session and clients
@@ -114,7 +121,7 @@ training_set = fe.create_training_set(
             input_bindings={"residual_sugar_content": "residual_sugar"},
         ),
     ],
-    exclude_columns=["update_timestamp_utc"]
+    exclude_columns=["update_timestamp_utc"],
 )
 
 # Load feature-engineered DataFrame
@@ -141,9 +148,7 @@ pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("regressor", LGBMReg
 
 mlflow.set_experiment(experiment_name=cur_experiment_name)
 
-with mlflow.start_run(tags={"branch": "week5",
-                            "git_sha": f"{git_sha}",
-                            "job_run_id": job_run_id}) as run:
+with mlflow.start_run(tags={"branch": "week5", "git_sha": f"{git_sha}", "job_run_id": job_run_id}) as run:
     run_id = run.info.run_id
     pipeline.fit(X_train, y_train)
     y_pred = pipeline.predict(X_test)
@@ -173,5 +178,5 @@ with mlflow.start_run(tags={"branch": "week5",
         signature=signature,
     )
 
-model_uri=f'runs:/{run_id}/{cur_model_artifact_path}'
+model_uri = f"runs:/{run_id}/{cur_model_artifact_path}"
 dbutils.jobs.taskValues.set(key="new_model_uri", value=model_uri)

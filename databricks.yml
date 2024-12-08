@@ -4,16 +4,51 @@
 
 bundle:
   name: marvelous-databricks-course-a0134m
+  #databricks_cli_version: "0.230.0"
+  cluster_id: 1018-024853-shr990fc
+
+include:
+  - asset_bundles/*.yaml
+
+permissions:
+  - level: CAN_MANAGE
+    user_name: mahajan134@gmail.com
+
+artifacts:
+  default:
+    type: whl
+    build: uv build --wheel
+    # build: python -m build
+    path: .
+
+variables:
+  root_path:
+    description: root_path for the target
+    # default: /Shared/.bundle/${bundle.target}/${bundle.name}
+    default: /Workspace/Users/mahajan134@gmail.com/.bundle/marvelous-databricks-course-a0134m/dev/files
+  git_sha:
+    description: git_sha
+    default: abcd
+  schedule_pause_status:
+    description: schedule pause status
+    default: UNPAUSED
+  env:
+    description: environment
+    default: dev
 
 targets:
+  prod:
+    variables:
+      env: prod
+    workspace:
+      host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
+      root_path: ${var.root_path}
+
   dev:
     mode: development
     default: true
+    variables:
+      env: dev
     workspace:
       host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
-
-  ## Optionally, there could be 'staging' or 'prod' targets here.
-  #
-  # prod:
-  #   workspace:
-  #     host: https://dbc-643c4c2b-d6c9.cloud.databricks.com
+      # root_path: /Workspace/Users/mahajan134@gmail.com/.bundle/${bundle.name}/dev
